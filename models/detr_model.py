@@ -1,3 +1,12 @@
+"""
+Created on Sat Apr  9 04:08:02 2022
+@author: Admin_with ODD Team
+
+Edited by our team : Sat Oct 5 10:00 2024
+
+references: https://github.com/vinvino02/GLPDepth
+"""
+
 import io
 import torch
 import base64
