@@ -21,11 +21,30 @@
 
     <!-- Navigation Bar (Placed Below Title Area) -->
     <nav class="bg-white shadow-md">
-        <div class="max-w-7xl mx-auto flex justify-center space-x-8 py-4">
-            <a href="#endpoint" class="text-gray-700 hover:text-blue-500 hover:underline transition-all duration-200">Endpoint</a>
-            <a href="#html-js" class="text-gray-700 hover:text-blue-500 hover:underline transition-all duration-200">HTML + JavaScript Example</a>
-            <a href="#python" class="text-gray-700 hover:text-blue-500 hover:underline transition-all duration-200">Python Example</a>
-            <a href="#flutter" class="text-gray-700 hover:text-blue-500 hover:underline transition-all duration-200">Flutter Example</a>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex items-center justify-center h-16 gap-6 sm:gap-8">
+            <!-- Regular nav links with improved hover effects -->
+            <a href="#endpoint" class="text-gray-700 font-medium hover:text-blue-600 relative group py-2">
+              Endpoint
+              <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+            <a href="#html-js" class="text-gray-700 font-medium hover:text-blue-600 relative group py-2">
+              HTML + JavaScript
+              <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+            <a href="#python" class="text-gray-700 font-medium hover:text-blue-600 relative group py-2">
+              Python Example
+              <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+
+            <!-- CTA button with enhanced design -->
+            <a href="./try_page" class="ml-2 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+              Try it
+              <svg xmlns="http://www.w3.org/2000/svg" class="ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </a>
+          </div>
         </div>
     </nav>
 
@@ -44,7 +63,7 @@
         <section id="endpoint">
             <h2 class="text-3xl font-bold mb-4">WebSocket Endpoint</h2>
             <p class="text-lg mb-4">The WebSocket API endpoint is:</p>
-            <pre class="bg-gray-100 rounded-md p-4 text-sm"><code class="language-json">ws://your-domain.com/ws</code></pre>
+            <pre class="bg-gray-100 rounded-md p-4 text-sm"><code class="language-json">ws://your-domain.com/ws/predict</code></pre>
         </section>
 
         <!-- HTML + JavaScript Example -->
@@ -199,11 +218,11 @@ def resize_image(image_path, max_size=(400, 400)):
     image = Image.open(image_path)
     image.thumbnail(max_size)
     buffer = io.BytesIO()
-    image.save(buffer, format=image.format) 
+    image.save(buffer, format=image.format)
     return buffer.getvalue(), image.size, image.format
 
 async def send_image(image_path):
-    uri = "ws://localhost:8000/ws" 
+    uri = "ws://34.172.243.105:8000/ws/predict/"
 
     try:
         async with websockets.connect(uri) as websocket:
@@ -230,77 +249,6 @@ if __name__ == "__main__":
             </code></pre>
         </section>
 
-        <!-- Flutter Example -->
-        <section id="flutter">
-            <h2 class="text-3xl font-bold mb-4">Flutter (Mobile) Example</h2>
-            <p class="text-lg mb-4">If you're using Flutter, here's an example of how to connect to the WebSocket API to upload images from a mobile device using the <code>web_socket_channel</code> package.</p>
-
-            <pre class="bg-gray-100 rounded-md p-4 overflow-auto text-sm"><code class="language-dart">
-import 'dart:io';
-import 'dart:typed_data';
-import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:web_socket_channel/io.dart';
-
-void main() => runApp(MyApp());
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: ImageUploadScreen(),
-    );
-  }
-}
-
-class ImageUploadScreen extends StatefulWidget {
-  @override
-  _ImageUploadScreenState createState() => _ImageUploadScreenState();
-}
-
-class _ImageUploadScreenState extends State<ImageUploadScreen> {
-  final channel = IOWebSocketChannel.connect('ws://localhost:8000/ws');
-  File? _image;
-
-  Future pickImage() async {
-    final pickedFile = await ImagePicker().getImage(source: ImageSource.gallery);
-    setState(() {
-      _image = File(pickedFile.path);
-    });
-  }
-
-  void sendImage() async {
-    if (_image != null) {
-      Uint8List imageBytes = await _image!.readAsBytes();
-      channel.sink.add(imageBytes);
-    }
-  }
-
-  @override
-  void dispose() {
-    channel.sink.close();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('WebSocket Image Upload')),
-      body: Center(
-        child: Column(
-          children: [
-            _image == null ? Text('No image selected.') : Image.file(_image!),
-            ElevatedButton(onPressed: pickImage, child: Text('Pick Image')),
-            ElevatedButton(onPressed: sendImage, child: Text('Send Image')),
-          ],
-        ),
-      ),
-    );
-  }
-}
-            </code></pre>
-        </section>
-
         <!-- Response Format Section -->
         <section>
             <h2 class="text-3xl font-bold mb-4">Response Format</h2>
@@ -310,24 +258,22 @@ class _ImageUploadScreenState extends State<ImageUploadScreen> {
 {
   "objects": [
     {
-      "class": "truck",
-      "distance_estimated": 5.764639854431152,
-      "features": {
-        "height": 199.6181640625,
-        "width": 206.4336051940918,
-        "mean_depth": 1.5435211658477783,
-        "depth_mean_trim": 1.4264233112335205,
-        "depth_median": 1.4159464836120605
-      },
-      "bounding_box": {
-        "xmin": 23,
-        "xmax": 230.3593292236328,
-        "ymin": 298,
-        "ymax": 497.7742919921875
-      }
+      "class": "car",
+        "distance_estimated": 30.44631576538086,
+        "features": {
+            "xmin": 11.0,
+            "ymin": 69.0,
+            "xmax": 73.0,
+            "ymax": 103.0,
+            "mean_depth": 3.247824456818416,
+            "depth_mean_trim": 3.2072143793106083,
+            "depth_median": 3.37540864944458,
+            "width": 62.0,
+            "height": 34.0
+        }
     }
   ]
-}           
+}
             </code></pre>
         </section>
     </div>
@@ -335,9 +281,9 @@ class _ImageUploadScreenState extends State<ImageUploadScreen> {
     <!-- Footer Section -->
     <footer class="bg-gray-800 text-white py-6 mt-12">
         <div class="max-w-7xl mx-auto text-center space-y-4">
-            <p>&copy; 2024 Your Company. All rights reserved.</p>
+            <p>&copy; 2024 Advances. All rights reserved.</p>
             <p>
-                <a href="mailto:support@yourcompany.com" class="hover:underline">Contact Support</a> | 
+                <a href="mailto:oussama_elfila@um5.ac.ma" class="hover:underline">Contact Support</a> |
                 <a href="/privacy-policy" class="hover:underline">Privacy Policy</a>
             </p>
         </div>

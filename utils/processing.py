@@ -16,7 +16,7 @@ from utils.processing_cy import process_bbox_depth_cy, handle_overlaps_cy
 class PROCESSING:
     def process_detections(self, scores, boxes, depth_map, detr):
         self.data = pd.DataFrame(columns=['xmin','ymin','xmax','ymax','width', 'height',
-                                        'depth_mean_trim','depth_mean','depth_median', 
+                                        'depth_mean_trim','depth_mean','depth_median',
                                         'class', 'rgb'])
         
         boxes_array = np.array([[int(box[1]), int(box[0]), int(box[3]), int(box[2])] 

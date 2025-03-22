@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Image Upload Demo</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* Demo section styling */
+        .execution-section {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            font-size: 2rem;
+            color: #384B70;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #507687;
+        }
+
+        .demo-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+
+        .upload-container, .response-container {
+            flex: 1;
+            min-width: 300px;
+            padding: 1.5rem;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .container-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #384B70;
+        }
+
+        /* Upload area styling */
+        .file-input-container {
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .file-input-container:hover {
+            border-color: #507687;
+            background-color: #f8f9fa;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-label {
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .file-icon {
+            font-size: 2.5rem;
+            color: #507687;
+            width: 64px;
+            height: 64px;
+        }
+        .file-placeholder {
+            max-width: 100%;
+            height: auto;
+            margin-top: 1rem;
+            border-radius: 4px;
+            display: none;
+        }
+
+        #sendButton {
+            background-color: #384B70;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        #sendButton:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        #sendButton:hover:not(:disabled) {
+            background-color: #507687;
+        }
+
+        /* Response area styling */
+        .response-output {
+            height: 300px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 1rem;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+
+        /* Tabs styling */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 1rem;
+        }
+
+        .tab-button {
+            padding: 0.5rem 1rem;
+            background-color: #f1f1f1;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 1rem;
+        }
+
+        .tab-button.active {
+            background-color: #384B70;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+            height: 300px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Visualization area styling */
+        #visualizationContainer {
+            position: relative;
+            height: 100%;
+            overflow: auto;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .detection-canvas {
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* Utilities */
+        #loading {
+            display: none;
+            margin-top: 1rem;
+            color: #384B70;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        #message {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border-radius: 4px;
+            text-align: center;
+            display: none;
+        }
+
+        .error {
+            background-color: #ffebee;
+            color: #d32f2f;
+        }
+
+        .success {
+            background-color: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .info {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 0.5rem;
+        }
+
+        .stats {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        /* Debug output */
+        #debugOutput {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: #999;
+            border-top: 1px dashed #ddd;
+            padding-top: 0.5rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Interactive Demo Section -->
+    <section class="execution-section">
+        <h2 class="section-title">Try It Yourself</h2>
+        <p>Upload an image and see the object detection and depth estimation results in real-time.</p>
+
+        <div class="demo-container">
+            <!-- Upload Container -->
+            <div class="upload-container">
+                <h3 class="container-title">Upload Image</h3>
+
+                <div class="file-input-container">
+                    <label for="fileInput" class="file-label">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/a/a1/Icons8_flat_folder.svg" class="file-icon"/>
+                        <span>Click to select image</span>
+                        <p class="info">PNG or JPEG, max 2MB</p>
+                    </label>
+                    <input type="file" accept="image/*" id="fileInput" />
+                    <img id="imagePreview" class="file-placeholder" alt="Image preview" />
+                </div>
+
+                <button id="sendButton" disabled>Process Image</button>
+                <div id="loading">Processing your image...</div>
+                <div id="message"></div>
+
+                <div class="stats">
+                    <div id="imageSize"></div>
+                    <div id="processingTime"></div>
+                </div>
+
+                <div id="debugOutput"></div>
+            </div>
+
+            <!-- Response Container with Tabs -->
+            <div class="response-container">
+                <h3 class="container-title">Response</h3>
+
+                <div class="tabs">
+                    <button class="tab-button active" data-tab="raw">Raw Output</button>
+                    <button class="tab-button" data-tab="visual">Visual Output</button>
+                </div>
+
+                <!-- Raw Output Tab -->
+                <div id="rawTab" class="tab-content active">
+                    <pre class="response-output" id="responseOutput">// Response will appear here after processing</pre>
+                </div>
+
+                <!-- Visual Output Tab -->
+                <div id="visualTab" class="tab-content">
+                    <div id="visualizationContainer">
+                        <canvas id="detectionCanvas" class="detection-canvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // DOM Elements
+        const fileInput = document.getElementById('fileInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const sendButton = document.getElementById('sendButton');
+        const loading = document.getElementById('loading');
+        const message = document.getElementById('message');
+        const responseOutput = document.getElementById('responseOutput');
+        const imageSizeInfo = document.getElementById('imageSize');
+        const processingTimeInfo = document.getElementById('processingTime');
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const detectionCanvas = document.getElementById('detectionCanvas');
+        const ctx = detectionCanvas.getContext('2d');
+        const debugOutput = document.getElementById('debugOutput');
+
+        // Enable debug mode (set to false in production)
+        const DEBUG = true;
+
+        // WebSocket connection
+        let socket = null;
+        let imageBytes = null;
+        let startTime = null;
+        let originalImage = null;
+        let processingWidth = 0;
+        let processingHeight = 0;
+        let responseData = null;
+
+        // Tab switching functionality
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+
+                // Update button states
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+
+                // Update tab content visibility
+                tabContents.forEach(content => content.classList.remove('active'));
+                document.getElementById(tabName + 'Tab').classList.add('active');
+
+                // If switching to visual tab and we have data, ensure visualization is rendered
+                if (tabName === 'visual' && responseData && originalImage) {
+                    visualizeResults(originalImage, responseData);
+                }
+            });
+        });
+
+        // Initialize WebSocket connection
+        function initWebSocket() {
+            // Update with your actual WebSocket endpoint
+            socket = new WebSocket(`ws://192.168.1.100:8000/ws/predict`);
+
+            socket.onopen = () => {
+                console.log('WebSocket connection established');
+                if (imageBytes) {
+                    sendButton.disabled = false;
+                }
+            };
+
+            socket.onmessage = (event) => {
+                loading.style.display = 'none';
+                try {
+                    const data = JSON.parse(event.data);
+                    responseData = data; // Store for tab switching
+                    const endTime = performance.now();
+                    const timeTaken = endTime - startTime;
+
+                    // Format and display raw response
+                    responseOutput.textContent = JSON.stringify(data, null, 2);
+                    processingTimeInfo.textContent = `Processing time: ${timeTaken.toFixed(2)} ms`;
+
+                    // Visualize the results
+                    if (originalImage) {
+                        visualizeResults(originalImage, data);
+                    }
+
+                    // Show success message
+                    showMessage('Image processed successfully!', 'success');
+                } catch (error) {
+                    console.error('Error parsing response:', error);
+                    showMessage('Error processing the response.', 'error');
+                    if (DEBUG) {
+                        debugOutput.style.display = 'block';
+                        debugOutput.textContent = `Error: ${error.message}\nRaw data: ${event.data.substring(0, 100)}...`;
+                    }
+                }
+            };
+
+            socket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                showMessage('Connection error. Please check your connection and try again.', 'error');
+                loading.style.display = 'none';
+            };
+
+            socket.onclose = () => {
+                console.log('WebSocket connection closed');
+                sendButton.disabled = true;
+                setTimeout(initWebSocket, 5000); // Attempt to reconnect after 5 seconds
+            };
+        }
+
+        // Initialize WebSocket when page loads
+        initWebSocket();
+
+        // Handle file input change
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+
+            // Clear previous selections
+            imageBytes = null;
+            imagePreview.style.display = 'none';
+            sendButton.disabled = true;
+            originalImage = null;
+            responseData = null;
+
+            // Validate file
+            if (!file) return;
+
+            if (file.size > 2 * 1024 * 1024) {
+                showMessage('File size exceeds 2MB limit.', 'error');
+                return;
+            }
+
+            if (!['image/png', 'image/jpeg'].includes(file.type)) {
+                showMessage('Only PNG and JPEG formats are supported.', 'error');
+                return;
+            }
+
+            // Show image preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const image = new Image();
+                image.src = e.target.result;
+
+                image.onload = () => {
+                    // Store original image for visualization
+                    originalImage = image;
+
+                    // Set preview
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+
+                    // Update image info
+                    imageSizeInfo.textContent = `Original size: ${image.width}x${image.height} pixels`;
+
+                    // Resize image for processing
+                    resizeImage(image, file.type);
+                };
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Resize image function
+        function resizeImage(image, fileType) {
+            const canvas = document.createElement('canvas');
+            const maxWidth = 640;
+            const maxHeight = 320;
+
+            let width = image.width;
+            let height = image.height;
+
+            // Calculate dimensions
+            if (width > height) {
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+            } else {
+                if (height > maxHeight) {
+                    width = Math.round((width * maxHeight) / height);
+                    height = maxHeight;
+                }
+            }
+
+            // Store processing dimensions for visualization
+            processingWidth = width;
+            processingHeight = height;
+
+            // Set canvas dimensions and draw image
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(image, 0, 0, width, height);
+
+            // Convert to binary data
+            canvas.toBlob((blob) => {
+                const reader = new FileReader();
+                reader.readAsArrayBuffer(blob);
+                reader.onloadend = () => {
+                    imageBytes = new Uint8Array(reader.result);
+                    sendButton.disabled = socket.readyState !== WebSocket.OPEN;
+                    showMessage(`Image resized to ${width}x${height} pixels and ready to send.`, 'info');
+                };
+            }, fileType || 'image/png');
+        }
+
+        // Handle send button click
+        sendButton.addEventListener('click', () => {
+            if (!imageBytes) {
+                showMessage('No image selected.', 'error');
+                return;
+            }
+
+            if (socket.readyState !== WebSocket.OPEN) {
+                showMessage('WebSocket connection is not open. Reconnecting...', 'error');
+                initWebSocket();
+                return;
+            }
+
+            // Clear previous response
+            responseOutput.textContent = "// Processing...";
+            clearCanvas();
+            responseData = null;
+            debugOutput.style.display = 'none';
+
+            // Show loading state
+            loading.style.display = 'block';
+            message.style.display = 'none';
+
+            // Reset processing time
+            processingTimeInfo.textContent = '';
+
+            // Record start time and send image
+            startTime = performance.now();
+            socket.send(imageBytes);
+        });
+
+        // Visualize detection results
+        function visualizeResults(image, data) {
+    try {
+        // Set canvas dimensions
+        detectionCanvas.width = processingWidth;
+        detectionCanvas.height = processingHeight;
+
+        // Draw the original image
+        ctx.drawImage(image, 0, 0, processingWidth, processingHeight);
+
+        // Set styles for bounding boxes
+        ctx.lineWidth = 3;
+        ctx.font = 'bold 14px Arial';
+
+        // Find detections (checking all common formats)
+        let detections = [];
+        let detectionSource = '';
+
+        if (data.detections && Array.isArray(data.detections)) {
+            detections = data.detections;
+            detectionSource = 'detections';
+        } else if (data.predictions && Array.isArray(data.predictions)) {
+            detections = data.predictions;
+            detectionSource = 'predictions';
+        } else if (data.objects && Array.isArray(data.objects)) {
+            detections = data.objects;
+            detectionSource = 'objects';
+        } else if (data.results && Array.isArray(data.results)) {
+            detections = data.results;
+            detectionSource = 'results';
+        } else {
+            // Try to look one level deeper if no detections found
+            for (const key in data) {
+                if (typeof data[key] === 'object' && data[key] !== null) {
+                    if (Array.isArray(data[key])) {
+                        detections = data[key];
+                        detectionSource = key;
+                        break;
+                    } else {
+                        // Look one more level down
+                        for (const subKey in data[key]) {
+                            if (Array.isArray(data[key][subKey])) {
+                                detections = data[key][subKey];
+                                detectionSource = `${key}.${subKey}`;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Process each detection
+        detections.forEach((detection, index) => {
+            // Try to extract bounding box information
+            let bbox = null;
+            let label = null;
+            let confidence = null;
+            let distance = null;
+
+            // Extract label/class
+            if (detection.class !== undefined) {
+                label = detection.class;
+            } else {
+                // Fallback to other common property names
+                for (const key of ['label', 'name', 'category', 'className']) {
+                    if (detection[key] !== undefined) {
+                        label = detection[key];
+                        break;
+                    }
+                }
+            }
+
+            // Default label if none found
+            if (!label) label = `Object ${index + 1}`;
+
+            // Extract confidence score if available
+            for (const key of ['confidence', 'score', 'probability', 'conf']) {
+                if (detection[key] !== undefined) {
+                    confidence = detection[key];
+                    break;
+                }
+            }
+
+            // Extract distance - specifically look for distance_estimated first
+            if (detection.distance_estimated !== undefined) {
+                distance = detection.distance_estimated;
+            } else {
+                // Fallback to other common distance properties
+                for (const key of ['distance', 'depth', 'z', 'dist', 'range']) {
+                    if (detection[key] !== undefined) {
+                        distance = detection[key];
+                        break;
+                    }
+                }
+            }
+
+            // Look for bounding box in features
+            if (detection.features &&
+                detection.features.xmin !== undefined &&
+                detection.features.ymin !== undefined &&
+                detection.features.xmax !== undefined &&
+                detection.features.ymax !== undefined) {
+
+                bbox = {
+                    xmin: detection.features.xmin,
+                    ymin: detection.features.ymin,
+                    xmax: detection.features.xmax,
+                    ymax: detection.features.ymax
+                };
+            } else {
+                // Recursively search for bbox-like properties
+                function findBBox(obj, path = '') {
+                    if (!obj || typeof obj !== 'object') return null;
+
+                    // Check if this object looks like a bbox
+                    if ((obj.x !== undefined && obj.y !== undefined &&
+                        (obj.width !== undefined || obj.w !== undefined ||
+                         obj.height !== undefined || obj.h !== undefined)) ||
+                        (obj.xmin !== undefined && obj.ymin !== undefined &&
+                         obj.xmax !== undefined && obj.ymax !== undefined)) {
+                        return obj;
+                    }
+
+                    // Check if it's an array of 4 numbers (potential bbox)
+                    if (Array.isArray(obj) && obj.length === 4 &&
+                        obj.every(item => typeof item === 'number')) {
+                        return obj;
+                    }
+
+                    // Check common bbox property names
+                    for (const key of ['bbox', 'box', 'bounding_box', 'boundingBox']) {
+                        if (obj[key] !== undefined) {
+                            return obj[key];
+                        }
+                    }
+
+                    // Search nested properties
+                    for (const key in obj) {
+                        const result = findBBox(obj[key], path ? `${path}.${key}` : key);
+                        if (result) return result;
+                    }
+
+                    return null;
+                }
+
+                // Find bbox using recursive search as fallback
+                bbox = findBBox(detection);
+            }
+
+            // If we found a bounding box, draw it
+            if (bbox) {
+                // Parse different bbox formats
+                let x, y, width, height;
+
+                if (Array.isArray(bbox)) {
+                    // Try to determine array format
+                    if (bbox.length === 4) {
+                        if (bbox[0] >= 0 && bbox[1] >= 0 && bbox[2] <= 1 && bbox[3] <= 1) {
+                            // Likely normalized [x1, y1, x2, y2]
+                            x = bbox[0] * processingWidth;
+                            y = bbox[1] * processingHeight;
+                            width = (bbox[2] - bbox[0]) * processingWidth;
+                            height = (bbox[3] - bbox[1]) * processingHeight;
+                        } else if (bbox[2] > bbox[0] && bbox[3] > bbox[1]) {
+                            // Likely [x1, y1, x2, y2]
+                            x = bbox[0];
+                            y = bbox[1];
+                            width = bbox[2] - bbox[0];
+                            height = bbox[3] - bbox[1];
+                        } else {
+                            // Assume [x, y, width, height]
+                            x = bbox[0];
+                            y = bbox[1];
+                            width = bbox[2];
+                            height = bbox[3];
+                        }
+                    }
+                } else {
+                    // Object format with named properties
+                    if (bbox.x !== undefined && bbox.y !== undefined) {
+                        x = bbox.x;
+                        y = bbox.y;
+                        width = bbox.width || bbox.w || 0;
+                        height = bbox.height || bbox.h || 0;
+                    } else if (bbox.xmin !== undefined && bbox.ymin !== undefined) {
+                        x = bbox.xmin;
+                        y = bbox.ymin;
+                        width = (bbox.xmax || 0) - bbox.xmin;
+                        height = (bbox.ymax || 0) - bbox.ymin;
+                    }
+                }
+
+                // Validate coordinates
+                if (x === undefined || y === undefined || width === undefined || height === undefined) {
+                    return;
+                }
+
+                // Check if we need to scale normalized coordinates (0-1)
+                if (x >= 0 && x <= 1 && y >= 0 && y <= 1 && width >= 0 && width <= 1 && height >= 0 && height <= 1) {
+                    x = x * processingWidth;
+                    y = y * processingHeight;
+                    width = width * processingWidth;
+                    height = height * processingHeight;
+                }
+
+                // Generate a color based on the class name
+                const hue = stringToHue(label);
+                ctx.strokeStyle = `hsl(${hue}, 100%, 40%)`;
+                ctx.fillStyle = `hsla(${hue}, 100%, 40%, 0.3)`;
+
+                // Draw bounding box
+                ctx.beginPath();
+                ctx.rect(x, y, width, height);
+                ctx.stroke();
+                ctx.fill();
+
+                // Format confidence value
+                let confidenceText = "";
+                if (confidence !== null && confidence !== undefined) {
+                    // Convert to percentage if it's a probability (0-1)
+                    if (confidence <= 1) {
+                        confidence = (confidence * 100).toFixed(0);
+                    } else {
+                        confidence = confidence.toFixed(0);
+                    }
+                    confidenceText = ` ${confidence}%`;
+                }
+
+                // Format distance value
+                let distanceText = "";
+                if (distance !== null && distance !== undefined) {
+                    distanceText = ` : ${distance.toFixed(2)} m`;
+                }
+
+                // Create label text
+                const labelText = `${label}${confidenceText}${distanceText}`;
+
+                // Measure text width
+                const textWidth = ctx.measureText(labelText).width + 10;
+
+                // Draw label background
+                ctx.fillStyle = `hsl(${hue}, 100%, 40%)`;
+                ctx.fillRect(x, y - 20, textWidth, 20);
+
+                // Draw label text
+                ctx.fillStyle = "white";
+                ctx.fillText(labelText, x + 5, y - 5);
+            }
+        });
+
+    } catch (error) {
+        console.error('Error visualizing results:', error);
+        debugOutput.style.display = 'block';
+        debugOutput.textContent += `VISUALIZATION ERROR: ${error.message}\n`;
+        debugOutput.textContent += `Error stack: ${error.stack}\n`;
+    }
+}
+
+        // Generate consistent hue for string
+        function stringToHue(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return hash % 360;
+        }
+
+        // Clear canvas
+        function clearCanvas() {
+            if (detectionCanvas.getContext) {
+                ctx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
+            }
+        }
+
+        // Show message function
+        function showMessage(text, type) {
+            message.textContent = text;
+            message.className = '';
+            message.classList.add(type);
+            message.style.display = 'block';
+
+            if (type === 'info') {
+                setTimeout(() => {
+                    message.style.display = 'none';
+                }, 3000);
+            }
+        }
+    </script>
+</body>
+</html>

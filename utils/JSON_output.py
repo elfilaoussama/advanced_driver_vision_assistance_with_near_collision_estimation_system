@@ -1,4 +1,4 @@
-from models.predict_z_location_single_row import predict_z_location_single_row
+from models.predict_z_location_single_row_lstm import predict_z_location_single_row
 
 def generate_output_json(data, ZlocE, scaler):
     """
